@@ -1,104 +1,75 @@
-import azure.cognitiveservices.speech as speechsdk
-import os, requests, time 
-from xml.etree import ElementTree
-import uuid, json
+import sys
+from PyQt5.QtWidgets import QApplication, QDialog, QTableWidget, QTableWidgetItem, QMainWindow
+from PyQt5.uic import loadUi
+from PyQt5 import QtCore, QtWidgets, QtMultimedia
 
-suscripcionVoz = "SUSCRIPCION_VOZ"
-suscripcionTexto = "SUSCRIPCION_TEXTO"
+from TextAPI import traducirTexto
+from VozAPI import getAudioDeTexto, getTextoDeVoz, getVozPorIdiomaGeneroPersona
 
-def getTextoDeVoz(idiomaVoz):
+class TraductorInteligente(QMainWindow):
 
-    #Asignacion de parametros de la licencia y el idioma
-    regionVoz = "eastus"
-    speech_config = speechsdk.SpeechConfig(subscription=suscripcionVoz, region=regionVoz, speech_recognition_language= idiomaVoz)
-    speech_recognizer = speechsdk.SpeechRecognizer(speech_config=speech_config)
+    def __init__(self, *args):
+
+        super(TraductorInteligente, self).__init__(*args)
+        loadUi('Interfaz.ui', self)
+
+        idiomasEntrada = [
+            self.tr('es-MX, Español latinoamerica'),
+            self.tr('en-US, American English')
+        ]
+
+        idiomasSalida = [
+            self.tr('en-US, American English'),
+            self.tr('es-MX, Español latinoamerica')
     
-    print("Escuchando...")
+        ]
 
-    #Realiza reconocimiento. 
-    #Recognize_once (), para una sola emision.
-    #start_continuous_recognition (), para varias emisiones de sonido.
+        generos = [
+            self.tr('M, Masculino'),
+            self.tr('F, Femenino')
+        ]
 
-    result = speech_recognizer.recognize_once()
+        self.comboIdiomaEntrada.addItems(idiomasEntrada)
+        self.comboIdiomaSalida.addItems(idiomasSalida)
+        self.comboGenero.addItems(generos)
 
-    if result.reason == speechsdk.ResultReason.RecognizedSpeech:
-        return result.text
-
-def getAudioDeTexto(texto, nombreAgente, idioma):
+        self.botonTraducir.clicked.connect(self.prcTraducir)
     
-    timestr = time.strftime("%Y%m%d-%H%M")
-    access_token = get_token()
+    def prcTraducir(self):
+        self.labelEstado.setText("Escuchando voz...")
+        
+        if(self.comboIdiomaEntrada.currentText()=="es-MX, Español latinoamerica"): idiomaEntrada = "es-MX"
+        elif(self.comboIdiomaEntrada.currentText()=="en-US, American English"): idiomaEntrada = "en-US"
+        
+        if(self.comboIdiomaSalida.currentText()=="es-MX, Español latinoamerica"): idiomaSalida = "es-MX"
+        elif(self.comboIdiomaSalida.currentText()=="en-US, American English"): idiomaSalida = "en-US"
 
-    base_url = 'https://eastus.tts.speech.microsoft.com/'
-    path = 'cognitiveservices/v1'
-    constructed_url = base_url + path
-    headers = {
-        'Authorization': 'Bearer ' + access_token,
-        'Content-Type': 'application/ssml+xml',
-        'X-Microsoft-OutputFormat': 'riff-24khz-16bit-mono-pcm',
-        'User-Agent': 'YOUR_RESOURCE_NAME'
-    }
-    xml_body = ElementTree.Element('speak', version='1.0')
-    xml_body.set('{http://www.w3.org/XML/1998/namespace}lang', idioma)
-    voice = ElementTree.SubElement(xml_body, 'voice')
-    voice.set('{http://www.w3.org/XML/1998/namespace}lang', idioma)
-    pathAgente = 'Microsoft Server Speech Text to Speech Voice (' + idioma + ', ' + nombreAgente + ')'
-    voice.set('name', pathAgente)
-    voice.text = texto
-    body = ElementTree.tostring(xml_body)
+        if(self.comboGenero.currentText()=="F, Femenino"): generoVoz = "Femenino"
+        elif(self.comboIdiomaSalida.currentText()=="M, Masculino"): generoVoz = "Masculino"
 
-    response = requests.post(constructed_url, headers=headers, data=body)
-    if response.status_code == 200:
-        with open('sample-' + timestr + '.wav', 'wb') as audio:
-            audio.write(response.content)
-            print("\nStatus code: " + str(response.status_code) + "\nEl audio esta listo.\n")
-    else:
-        print("\nStatus code: " + str(response.status_code) + "\nHay un error con las cabeceras de las licencias.\n")
+        mensajeCaptado = getTextoDeVoz(idiomaEntrada)
+        self.labelInterpretado.setText(mensajeCaptado)
+        print(mensajeCaptado)
 
+        self.labelEstado.setText("Interpretando...")
+        mensajeTraducido = traducirTexto(mensajeCaptado, idiomaEntrada, idiomaSalida)       
+        self.labelTraducido.setText(mensajeTraducido)
+        print(mensajeTraducido)
 
-def getVozPorIdiomaGeneroPersona(idioma, genero):
-    if(idioma=='es-MX'):
-        if(genero=='Femenino'):
-            return "HildaRUS"
-        else:
-            return "Raul, Apollo"
-    else:
-        if(genero=='Femenino'):
-            return "JessaRUS"
-        else:
-            return "BenjaminRUS"
+        nombreAgente = getVozPorIdiomaGeneroPersona(idiomaSalida,generoVoz)
+        getAudioDeTexto(mensajeTraducido, nombreAgente, idiomaSalida)
+        self.labelEstado.setText("Audio traducido satisfactoriamente.")
 
-def get_token():
-    fetch_token_url = "https://eastus.api.cognitive.microsoft.com/sts/v1.0/issueToken"
-    headers = {
-        'Ocp-Apim-Subscription-Key': suscripcionVoz
-    }
-    response = requests.post(fetch_token_url, headers=headers)
-    return str(response.text)
+        
+        filename = 'audio.wav'
+        fullpath = QtCore.QDir.current().absoluteFilePath(filename) 
+        url = QtCore.QUrl.fromLocalFile(fullpath)
+        content = QtMultimedia.QMediaContent(url)
+        player = QtMultimedia.QMediaPlayer()
+        player.setMedia(content)
+        player.play()
 
-def traducirTexto(texto, idiomaInicial, idiomaFinal):
-    base_url = 'https://api.cognitive.microsofttranslator.com'
-    path = '/translate?api-version=3.0'
-    params = '&to=en'
-    constructed_url = base_url + path + params
-
-    headers = {
-        'Ocp-Apim-Subscription-Key': suscripcionTexto,
-        'Content-type': 'application/json',
-        'X-ClientTraceId': str(uuid.uuid4())
-    }
-
-    body = [{
-        'text' : texto
-    }]
-
-    request = requests.post(constructed_url, headers=headers, json=body)
-    response = json.loads(str(request.text))
-    return response[0]['translations'][0]['text']
-
-mensajeCaptado = getTextoDeVoz('es-MX')
-print(mensajeCaptado)
-mensajeTraducido = traducirTexto(mensajeCaptado, 'es-MX', 'en-US')
-print(mensajeTraducido)
-nombreAgente = getVozPorIdiomaGeneroPersona("en-US","Masculino")
-getAudioDeTexto(mensajeTraducido, nombreAgente, "en-US")
+app = QApplication(sys.argv)
+widget = TraductorInteligente()
+widget.show()
+app.exec_()
