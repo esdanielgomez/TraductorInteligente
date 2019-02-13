@@ -45,7 +45,7 @@ class TraductorInteligente(QMainWindow):
         elif(self.comboIdiomaSalida.currentText()=="en-US, American English"): idiomaSalida = "en-US"
 
         if(self.comboGenero.currentText()=="F, Femenino"): generoVoz = "Femenino"
-        elif(self.comboIdiomaSalida.currentText()=="M, Masculino"): generoVoz = "Masculino"
+        elif(self.comboGenero.currentText()=="M, Masculino"): generoVoz = "Masculino"
 
         mensajeCaptado = getTextoDeVoz(idiomaEntrada)
         self.labelInterpretado.setText(mensajeCaptado)
