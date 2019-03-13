@@ -2,7 +2,7 @@ import os, requests, time
 from xml.etree import ElementTree
 import uuid, json
 
-suscripcionTexto = "6f6444cdf3e34e69bbac64825cf35df7"
+suscripcionTexto = "LICENCIA"
 
 def traducirTexto(texto, idiomaInicial, idiomaFinal):
     base_url = 'https://api.cognitive.microsofttranslator.com'

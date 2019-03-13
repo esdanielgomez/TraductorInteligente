@@ -3,7 +3,7 @@ import os, requests, time
 from xml.etree import ElementTree
 import uuid, json
 
-suscripcionVoz = "7b96041f25144a4a8755ca71751376ec"
+suscripcionVoz = "LICENCIA"
 
 def getTextoDeVoz(idiomaVoz):
 
@@ -74,10 +74,3 @@ def get_token():
     }
     response = requests.post(fetch_token_url, headers=headers)
     return str(response.text)
-
-#mensajeCaptado = getTextoDeVoz('es-MX')
-#print(mensajeCaptado)
-#mensajeTraducido = traducirTexto(mensajeCaptado, 'es-MX', 'en-US')
-#print(mensajeTraducido)
-#nombreAgente = getVozPorIdiomaGeneroPersona("en-US","Masculino")
-#getAudioDeTexto(mensajeTraducido, nombreAgente, "en-US")
