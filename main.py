@@ -62,12 +62,37 @@ class TraductorInteligente(QMainWindow):
 
         
         filename = 'audio.wav'
-        fullpath = QtCore.QDir.current().absoluteFilePath(filename) 
-        url = QtCore.QUrl.fromLocalFile(fullpath)
-        content = QtMultimedia.QMediaContent(url)
-        player = QtMultimedia.QMediaPlayer()
-        player.setMedia(content)
-        player.play()
+        import pyaudio
+        import wave
+
+        CHUNK = 1024
+
+        wf = wave.open(filename, 'rb')
+
+        # instantiate PyAudio (1)
+        p = pyaudio.PyAudio()
+
+        # open stream (2)
+        stream = p.open(format=p.get_format_from_width(wf.getsampwidth()),
+                        channels=wf.getnchannels(),
+                        rate=wf.getframerate(),
+                        output=True)
+
+        # read data
+        data = wf.readframes(CHUNK)
+
+        # play stream (3)
+        while len(data) > 0:
+            stream.write(data)
+            data = wf.readframes(CHUNK)
+
+        # stop stream (4)
+        stream.stop_stream()
+        stream.close()
+
+        # close PyAudio (5)
+        p.terminate()
+
 
 app = QApplication(sys.argv)
 widget = TraductorInteligente()
